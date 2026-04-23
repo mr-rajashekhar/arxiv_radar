@@ -1,0 +1,31 @@
+# --- Secrets & personal data ---
+# profile.md describes personal research interests; keep out of public repos.
+# A template (profile.example.md) is committed instead.
+profile.md
+*.bak
+config.yaml
+
+# --- Runtime state / generated artifacts ---
+seen.db
+digests/
+logs/
+state/
+preview*.html
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp

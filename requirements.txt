@@ -1,0 +1,7 @@
+openai>=1.50
+azure-identity>=1.15
+arxiv>=2.1
+PyYAML>=6.0
+keyring>=24.0
+requests>=2.31
+beautifulsoup4>=4.12

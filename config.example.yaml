@@ -1,0 +1,51 @@
+# Arxiv Research Radar — configuration
+
+arxiv:
+  categories:
+    - cs.DC   # Distributed, Parallel, Cluster Computing
+    - cs.AR   # Hardware Architecture
+    - cs.OS   # Operating Systems
+    - cs.LG   # Machine Learning
+    - cs.SY   # Systems and Control
+    - cs.PF   # Performance
+  max_results: 300
+  lookback_hours: 36   # slightly > 24h to absorb arxiv's bursty release cycle
+
+scoring:
+  # Stage 1 — cheap triage on titles only. Drops obvious irrelevants.
+  triage:
+    enabled: true
+    batch_size: 40       # titles are tiny; pack many per call
+    threshold: 4         # papers scoring below this are dropped
+  # Stage 2 — full relevance scoring on survivors (existing behaviour).
+  batch_size: 15
+  threshold: 7           # keep papers with score >= threshold
+  max_summaries: 8       # cap LLM summary calls per day
+  # When true, each summary is enriched with Intro + Conclusion excerpts from
+  # ar5iv HTML (https://ar5iv.labs.arxiv.org/). Falls back to abstract-only on
+  # any failure. Adds ~1s per paper.
+  use_ar5iv: true
+
+llm:
+  api_path: gcr/shared
+  model: gpt-5_2025-08-07
+  api_version: 2025-04-01-preview
+  scope: api://trapi/.default
+
+email:
+  enabled: true
+  smtp_host: smtp.gmail.com
+  smtp_port: 587
+  sender: you@example.com       # EDIT ME
+  # recipient: single address, comma-separated string, or a YAML list
+  recipient:
+    - you@example.com           # EDIT ME
+    # - colleague@example.com
+    # - advisor@microsoft.com
+  subject_prefix: "[Arxiv Radar]"
+
+paths:
+  digests_dir: digests
+  logs_dir: logs
+  db_file: seen.db
+  profile_file: profile.md
