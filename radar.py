@@ -127,6 +127,14 @@ def write_fallback_digest(digest_path: Path, papers, reason: str) -> None:
 
 
 def main() -> int:
+    # Skip weekends — arxiv.org doesn't post new submissions on Sat/Sun
+    # (paper announcements are batched Mon-Fri evenings ET).
+    weekday = datetime.now().weekday()  # Mon=0 .. Sun=6
+    if weekday >= 5:
+        print(f"arxiv_radar: weekend ({datetime.now().strftime('%A')}); skipping run.")
+        disable_retry_task()  # quiet the 5-min loop today
+        return 0
+
     # Fast-path guards — keep retries cheap.
     if already_ran_today():
         print("arxiv_radar: today's digest already delivered; exiting.")
