@@ -153,14 +153,29 @@ def main() -> int:
     profile = load_profile(ROOT / cfg["paths"]["profile_file"])
     mem = Memory(ROOT / cfg["paths"]["db_file"])
 
-    # 1. Fetch
+    # 1. Fetch — Mon/Tue need a longer lookback to capture Friday's papers.
+    # arxiv announces Mon-Fri at ~20:00 UTC; submissions can be 60-80h old by
+    # the time we run on Tuesday morning IST. Dedup will drop overlap with
+    # earlier runs.
+    base_lookback = cfg["arxiv"]["lookback_hours"]
+    weekday = datetime.now().weekday()  # Mon=0..Sun=6
+    if weekday in (0, 1):  # Monday, Tuesday
+        lookback = max(base_lookback, 96)
+        log.info("%s detected: extending lookback to %dh (base=%dh)",
+                 datetime.now().strftime("%A"), lookback, base_lookback)
+    else:
+        lookback = base_lookback
+
     papers = fetch_recent(
         cfg["arxiv"]["categories"],
-        lookback_hours=cfg["arxiv"]["lookback_hours"],
+        lookback_hours=lookback,
         max_results=cfg["arxiv"]["max_results"],
     )
     if not papers:
         log.warning("No papers fetched; exiting.")
+        # Mark success so the 5-min retry loop stops; nothing will change today.
+        mark_success(0)
+        disable_retry_task()
         return 0
 
     # 2. Dedup
@@ -169,6 +184,8 @@ def main() -> int:
     log.info("%d new papers after dedup (of %d fetched)", len(new_papers), len(papers))
     if not new_papers:
         log.info("Nothing new today; exiting without sending email.")
+        mark_success(0)
+        disable_retry_task()
         return 0
 
     digest_path = ROOT / cfg["paths"]["digests_dir"] / f"{datetime.now().strftime('%Y-%m-%d')}.md"
