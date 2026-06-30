@@ -8,8 +8,10 @@ arxiv:
     - cs.LG   # Machine Learning
     - cs.SY   # Systems and Control
     - cs.PF   # Performance
-  max_results: 300
-  lookback_hours: 36   # slightly > 24h to absorb arxiv's bursty release cycle
+    - cs.AI
+    - cs.MA
+  max_results: 600
+  lookback_hours: 36   # slightly > 24h on weekdays; auto-bumped to 96h on Mon/Tue
 
 scoring:
   # Stage 1 — cheap triage on titles only. Drops obvious irrelevants.
