@@ -19,7 +19,6 @@ import keyring
 from arxiv_client import Paper
 
 log = logging.getLogger(__name__)
-
 KEYRING_SERVICE = "arxiv_radar"
 KEYRING_KEY = "gmail"
 

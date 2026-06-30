@@ -68,24 +68,16 @@ def has_internet(host: str = "export.arxiv.org", port: int = 443, timeout: float
 
 
 def disable_retry_task(task_name: str = "ArxivRadar") -> None:
-    """Disable the scheduled task so the 5-min retry loop stops for today.
-    A companion task 'ArxivRadar-Reset' re-enables it tomorrow at 6:59 AM.
-    No-op (logs a warning) if schtasks.exe is unavailable or the task doesn't exist.
+    """No-op kept for backward compatibility.
+
+    The scheduled task is configured to run via pythonw.exe (windowless), so the
+    5-min retries after a successful run are completely silent — no pop-ups, and
+    the state file (last_run.json) makes each repeat a sub-second no-op exit.
+    Self-disabling proved brittle: the companion reset task occasionally fails in
+    scheduled context (SCHED_S_TASK_TERMINATED), leaving ArxivRadar disabled and
+    skipping a day. Idempotent retries are strictly more reliable.
     """
-    import subprocess
-    try:
-        r = subprocess.run(
-            ["schtasks", "/Change", "/TN", task_name, "/DISABLE"],
-            capture_output=True, text=True, timeout=10,
-        )
-        if r.returncode == 0:
-            logging.getLogger("radar").info("Disabled scheduled task '%s' for today.", task_name)
-        else:
-            logging.getLogger("radar").warning(
-                "Could not disable task '%s' (rc=%d): %s", task_name, r.returncode, r.stderr.strip()
-            )
-    except Exception as e:
-        logging.getLogger("radar").warning("disable_retry_task failed: %s", e)
+    return
 
 
 def setup_logging(logs_dir: Path) -> Path:
@@ -166,11 +158,20 @@ def main() -> int:
     else:
         lookback = base_lookback
 
-    papers = fetch_recent(
-        cfg["arxiv"]["categories"],
-        lookback_hours=lookback,
-        max_results=cfg["arxiv"]["max_results"],
-    )
+    try:
+        papers = fetch_recent(
+            cfg["arxiv"]["categories"],
+            lookback_hours=lookback,
+            max_results=cfg["arxiv"]["max_results"],
+        )
+    except Exception as e:
+        # Transient arxiv API failures (empty pages, throttling, timeouts) raise
+        # out of the `arxiv` library after num_retries. Don't let them abort the
+        # whole script — return non-zero so Task Scheduler's 5-min loop retries
+        # on the next tick. Do NOT mark_success, do NOT disable the retry task.
+        log.exception("fetch_recent failed: %s — will retry on next trigger.", e)
+        log.info("=== Arxiv Radar run done (FAILED fetch) ===")
+        return 3
     if not papers:
         log.warning("No papers fetched; exiting.")
         # Mark success so the 5-min retry loop stops; nothing will change today.
